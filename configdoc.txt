@@ -1,0 +1,15 @@
+-frameX int|max        window width (pixels; `max` = full screen; default: 640)
+-frameY int|max        window height (pixels; `max` = full screen; default: 500)
+
+-steps int             steps per game cycle (default: 5000)
+-maxfps int            maximum steps/second (to reduce CPU load; default: 50)
+
+-x int                 game arena width (cells; default: depends on plugin count)
+-y int                 game arena height (cells; default: depends on plugin count)
+-perimeter option      arena perimeter: none, open, or closed (default: open)
+
+-walls int             count of wall elements in arena (default: x*y/300)
+-zugars int            count of good plants in arena (default: x*y/250)
+-toxifera int          count of bad plants in arena (default: x*y/350)
+-fluppets int          count of good beasts in arena (default: x*y/350)
+-snorgs int            count of bad beasts in arena (default: x*y/500)
