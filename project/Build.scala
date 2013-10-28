@@ -10,7 +10,7 @@ object Build extends Build {
   val start = TaskKey[Unit]("start") <<= (baseDirectory,
     unmanagedClasspath in Compile, javaHome) map {
     (baseDirectory, ucp, java) =>
-      ScalatronApiClient.start(baseDirectory.toPath.toAbsolutePath.toString,
+      ScalatronApiClient.start(baseDirectory,
         ucp.files.filter(_.name.endsWith("Scalatron.jar")).absString, java)
   }
 
@@ -18,15 +18,30 @@ object Build extends Build {
 
   val ScalaTron = config("scalatron")
 
-  val deployLocal = TaskKey[Unit]("deploy-local", "Deploys Scalatron bot to local server")
-  val deployLocalTask = deployLocal <<= (sources in Compile) map { (sources: Seq[File]) =>
-      ScalatronApiClient.deployLocal(sources)
+  val deployRemote = TaskKey[Unit]("deploy-remote", "Deploys Scalatron bot to a remote server")
+  val deployRemoteTask = deployRemote <<= (baseDirectory, sources in Compile) map { (baseDirectory, sources: Seq[File]) =>
+      ScalatronApiClient.deployRemote(baseDirectory, sources)
   }
+
+  val deployLocal = TaskKey[Unit]("deploy-local", "Deploys Scalatron bot to local server")
+  val deployLocalTask = deployLocal <<= (baseDirectory, packageBin in Compile) map { (baseDirectory, botJar) =>
+    ScalatronApiClient.deployLocal(baseDirectory, botJar)
+  }
+
+  val deleteBots = TaskKey[Unit]("delete-bots", "Delete all local Scalatron bots")
+  val deleteBotsTask = deleteBots <<= (baseDirectory) map { (baseDirectory) =>
+    ScalatronApiClient.deleteBots(baseDirectory)
+  }
+
+  val help = TaskKey[Unit]("help") := ScalatronApiClient.help()
+
+
 
   val bot = Project(
     id = "mybot",
     base = file("."),
-    settings = Project.defaultSettings ++ botSettings ++ inConfig(ScalaTron)(Seq(deployLocalTask, start, stop))).configs(ScalaTron)
+    settings = Project.defaultSettings ++ botSettings ++ inConfig(ScalaTron)(Seq(deployLocalTask, deployRemoteTask,
+      start, stop, deleteBotsTask, help))).configs(ScalaTron)
 
   val botSettings = Seq[Setting[_]](
     name := "my-scalatron-bot",

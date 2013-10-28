@@ -1,7 +1,6 @@
 import com.ning.http.client.{Cookie => ningCookie}
 import dispatch._
 import Defaults._
-import java.io.File
 import java.util.concurrent.TimeUnit
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -10,6 +9,7 @@ import org.json4s.jackson.JsonMethods._
 import org.json4s.native.Serialization
 import org.json4s.native.Serialization.write
 import collection.JavaConverters._
+import sbt._
 
 object ScalatronApiClient {
 
@@ -70,7 +70,7 @@ object ScalatronApiClient {
     }
   }
 
-  def start(baseDirectory: String, scalatronJar: String, javaHome: Option[File]) = {
+  def start(baseDirectory: File, scalatronJar: String, javaHome: Option[File]) = {
     currentProcess match {
       case Some(_) => sys.error("There's already a scalatron process running! (Use 'scalatron:stop' if you want to start a new one)")
       case None => {
@@ -88,7 +88,17 @@ object ScalatronApiClient {
         println(s"Running scalatron with command: $cmd")
 
         val process = sbt.Process(cmd)
-        currentProcess = Some(process.run())
+
+        val log = baseDirectory / "server.log"
+        class Logger extends sbt.ProcessLogger {
+
+          def info(s: => String): Unit = IO.writeLines(log, Seq(s), append = true)
+          def error(s: => String): Unit = IO.writeLines(log, Seq(s), append = true)
+          def buffer[T](f: => T): T = f
+        }
+        currentProcess = Some(process.run(new Logger))
+        println("Scalatron server is running! Logging to " + log.absolutePath)
+        println("Browser UI: http://localhost: " + port)
       }
     }
   }
@@ -108,26 +118,71 @@ object ScalatronApiClient {
     }
   }
 
+  def help() = {
+    println {
+      "" +
+        "test test"
+    }
+  }
+
   case class ScalatronUser(name: String, resource: String, session: String)
   case class ScalatronUsers(users: Seq[ScalatronUser])
 
-  def deployLocal(sources: Seq[File]) = {
+  def deployRemote(baseDirectory: File, sources: Seq[File]) = {
     val files = Files(sources map { s=>
        val code = scala.io.Source.fromFile(s).mkString
        FileInfo(s.getName, code)
     })
-    var promptText = "Deploy local bot as user: "
-    promptText = lastLocalUser.map(u => promptText + s" (Leave empty to deploy as '$u')").getOrElse(promptText)
-    var name = readLine(promptText).trim
-    name = if (name.isEmpty) lastLocalUser.getOrElse("unknown") else name
-    val password = readLine("Password: ").trim
 
-    handle( for {
-      userAndCookies <- login(name, password).right
-      update <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "sources", files, userAndCookies._2)
-      build <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "sources" / "build", "", userAndCookies._2)
-      deploy <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "unpublished" / "publish", "", userAndCookies._2)
-    } yield {lastLocalUser = Some(name); deploy})
+    val configFile = baseDirectory + "/config.json"
+    val config = Config(configFile)
+    val remoteHostSetting = Option(config.connection.remote.host).map(_.trim).filterNot(_.isEmpty)
+    val remotePortSetting = Option(config.connection.remote.port)
+
+    (remoteHostSetting, remotePortSetting) match {
+      case (None, None) => sys.error("Missing remote host and port. Update config.json in the projects base directory.")
+      case (Some(remoteHost), None) => sys.error("Missing remote port. Update config.json in the projects base directory.")
+      case (None, Some(remotePort)) => sys.error("Missing remote host. Update config.json in the projects base directory.")
+      case (Some(remoteHost), Some(remotePort)) => {
+        var promptText = "Deploy bot as user: "
+        promptText = lastLocalUser.map(u => promptText + s" (Leave empty to deploy as '$u')").getOrElse(promptText)
+        val name = readLine(promptText).trim
+        val password = readLine("Password: ").trim
+
+        println("Deploying...")
+        handle( for {
+          userAndCookies <- login(name, password).right
+          update <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "sources", files, userAndCookies._2)
+          build <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "sources" / "build", "", userAndCookies._2)
+          deploy <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "unpublished" / "publish", "", userAndCookies._2)
+        } yield {lastLocalUser = Some(name); deploy})
+      }
+    }
+  }
+
+  def deployLocal(baseDirectory: File, botJar: File) = {
+    var promptText = "Name of bot: "
+    promptText = lastLocalUser.map(u => promptText + s" (Leave empty to deploy as '$u')").getOrElse(promptText)
+
+    var botName = readLine("Bot name: ")
+    if (botName.exists(c => Character.isWhitespace(c))) {
+       botName = readLine("No whitespace allowed, please try a different name: ")
+    }
+
+    val botDir = baseDirectory / "lib" / "Scalatron" / "bots"
+    IO createDirectory (botDir / botName)
+    IO copyFile (botJar, baseDirectory / "lib"/ "Scalatron" / "bots" / botName / "ScalatronBot.jar")
+
+  }
+
+  def deleteBots(baseDirectory: File) = {
+    val botDir = baseDirectory / "lib" / "Scalatron" / "bots"
+
+    if (botDir.exists()) {
+      IO.delete(botDir.listFiles().filter(_.name != "Reference"))
+    }
+
+    println("Bots deleted")
   }
 
   // Utils //
