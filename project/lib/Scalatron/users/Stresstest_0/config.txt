@@ -1,2 +1,0 @@
-password=Stresstest_0
-creationTime=24.okt.2013 19:38:27

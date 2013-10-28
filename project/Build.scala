@@ -30,7 +30,7 @@ object Build extends Build {
 
   val botSettings = Seq[Setting[_]](
     name := "my-scalatron-bot",
-    scalaVersion := "2.9.1",
+    scalaVersion := "2.9.3",
     unmanagedJars in Compile <++= baseDirectory map { base =>
       val libs = base / "lib"
       val dirs = (libs / "Scalatron" / "bin")
