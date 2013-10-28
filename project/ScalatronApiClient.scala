@@ -24,6 +24,8 @@ object ScalatronApiClient {
 
   var lastLocalUser: Option[String] = None
 
+  var cookieStore: Map[String, Option[List[Cookie]]] = Map()
+
   case class ScalatronOption(key: String, value: String) {
     override def toString = s"-$key $value"
   }
@@ -111,7 +113,7 @@ object ScalatronApiClient {
   }
 
   private def login(name: String, password: String): Future[Either[Throwable, (User, List[Cookie])]] = {
-    retrieveCookies(localhost / "api" / "users" / name / "session", Password(password)).map { f =>
+    retrieveCookies(localhost / "api" / "users" / name / "session", Password(password), name).map { f =>
       f.right.map { cookies =>
         (User(name, password), cookies)
       }
@@ -121,7 +123,8 @@ object ScalatronApiClient {
   case class ScalatronUser(name: String, resource: String, session: String)
   case class ScalatronUsers(users: Seq[ScalatronUser])
 
-  def deployRemote(baseDirectory: File, sources: Seq[File]) = {
+  // TODO Refactor me!
+  def deployRemote(baseDirectory: File, sources: Seq[File]) {
     val files = Files(sources map { s=>
        val code = scala.io.Source.fromFile(s).mkString
        FileInfo(s.getName, code)
@@ -138,24 +141,57 @@ object ScalatronApiClient {
       case (None, Some(remotePort)) => sys.error("Missing remote host. Update config.json in the projects base directory.")
       case (Some(remoteHost), Some(remotePort)) => {
         var promptText = "Deploy bot as user: "
-        promptText = lastLocalUser.map(u => promptText + s" (Leave empty to deploy as '$u')").getOrElse(promptText)
-        val name = readLine(promptText).trim
-        val password = readLine("Password: ").trim
+        promptText = lastLocalUser.map(u => promptText + s"(Leave empty to deploy as '$u') ").getOrElse(promptText)
+        val name = Option(readLine(promptText).trim).filterNot(_.isEmpty).orElse(lastLocalUser)
+        name match {
+          case None => {
+            println("Username cannot be empty.")
+            deployRemote(baseDirectory, sources)
+          }
+          case Some(user) => {
+            {
+              val cookies = cookieStore.getOrElse(user, None)
+              cookies match {
+                case Some(c) => {
+                  println("")
+                  println("Deploying...")
+                  handle(for {
+                    update <- putJsonWithAuth(localhost / "api" / "users" / user / "sources", files, c)
+                    build <- putJsonWithAuth(localhost / "api" / "users" / user / "sources" / "build", "", c)
+                    deploy <- putJsonWithAuth(localhost / "api" / "users" / user / "unpublished" / "publish", "", c)
+                  } yield {
+                    deploy.right.foreach {
+                      _ => lastLocalUser = Some(user); println("Remote deploy successful!")
+                    }; deploy
+                  })
+                }
+                case None => {
+                  val password = readLine("Password: ").trim
+                  println("")
+                  println("Deploying...")
+                  handle(for {
+                    userAndCookies <- login(user, password).right
+                    update <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "sources", files, userAndCookies._2)
+                    build <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "sources" / "build", "", userAndCookies._2)
+                    deploy <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "unpublished" / "publish", "", userAndCookies._2)
+                  } yield {
+                    deploy.right.foreach {
+                      _ => lastLocalUser = Some(user); println("Remote deploy successful!")
+                    }; deploy
+                  })
+                }
+              }
+            }
 
-        println("Deploying...")
-        handle( for {
-          userAndCookies <- login(name, password).right
-          update <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "sources", files, userAndCookies._2)
-          build <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "sources" / "build", "", userAndCookies._2)
-          deploy <- putJsonWithAuth(localhost / "api" / "users" / userAndCookies._1.name / "unpublished" / "publish", "", userAndCookies._2)
-        } yield {lastLocalUser = Some(name); deploy})
+          }
+        }
       }
     }
   }
 
   def deployLocal(baseDirectory: File, botJar: File) = {
     var promptText = "Name of bot: "
-    promptText = lastLocalUser.map(u => promptText + s" (Leave empty to deploy as '$u')").getOrElse(promptText)
+    promptText = lastLocalUser.map(u => promptText + s"(Leave empty to deploy as '$u')").getOrElse(promptText)
 
     var botName = readLine("Bot name: ")
     if (botName.exists(c => Character.isWhitespace(c))) {
@@ -198,10 +234,15 @@ object ScalatronApiClient {
    putJson(cookies.foldLeft(req)((r, c) => r.addCookie(Cookie.toNingCookie(c))), body)
   }
 
-
-  private def retrieveCookies(req: dispatch.Req, body: AnyRef): Future[Either[Throwable, List[Cookie]]] = {
+  private def retrieveCookies(req: dispatch.Req, body: AnyRef, username: String): Future[Either[Throwable, List[Cookie]]] = {
     val postRequest = Http((req << write(body) <:< Map("Content-Type" -> "application/json")).POST OK (r => r)).either
-    postRequest.right.map(r => r.getCookies.asScala.toList.map(Cookie.apply))
+    postRequest.right.map(r => {
+      val cookies = r.getCookies.asScala.toList.map(Cookie.apply)
+      if (cookies.nonEmpty) {
+        cookieStore = cookieStore.updated(username, Some(cookies))
+      }
+      cookies
+    })
   }
 
 }

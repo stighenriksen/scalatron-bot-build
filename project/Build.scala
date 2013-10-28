@@ -35,7 +35,7 @@ object Build extends Build {
   val bot = Project(
     id = "mybot",
     base = file("."),
-    settings = Project.defaultSettings ++ botSettings ++ inConfig(ScalaTron)(Seq(deployLocal, deployLocal,
+    settings = Project.defaultSettings ++ botSettings ++ inConfig(ScalaTron)(Seq(deployLocal, deployRemote,
       start, stop, deleteBots))).configs(ScalaTron)
 
   val botSettings = Seq[Setting[_]](
