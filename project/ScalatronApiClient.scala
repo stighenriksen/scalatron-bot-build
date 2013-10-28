@@ -118,8 +118,8 @@ object ScalatronApiClient {
     }
   }
 
-  private def login(name: String, password: String): Future[Either[Throwable, (User, List[Cookie])]] = {
-    retrieveCookies(localhost / "api" / "users" / name / "session", Password(password), name).map {
+  private def login(name: String, password: String, host: dispatch.Req): Future[Either[Throwable, (User, List[Cookie])]] = {
+    retrieveCookies(host / "api" / "users" / name / "session", Password(password), name).map {
       f =>
         f.right.map {
           cookies =>
@@ -163,9 +163,9 @@ object ScalatronApiClient {
               val remoteScalatronServer = host(remoteHost, remotePort)
               val password = readLine("Password: ").trim
               println("")
-              println("Deploying...")
+              println("Deploying to " + remoteHost + ":" + remotePort + "...")
               handle(for {
-                userAndCookies <- login(user, password).right
+                userAndCookies <- login(user, password, remoteScalatronServer).right
                 update <- putJsonWithAuth(remoteScalatronServer / "api" / "users" / userAndCookies._1.name / "sources", files, userAndCookies._2)
                 build <- putJsonWithAuth(remoteScalatronServer / "api" / "users" / userAndCookies._1.name / "sources" / "build", "", userAndCookies._2)
                 deploy <- putJsonWithAuth(remoteScalatronServer / "api" / "users" / userAndCookies._1.name / "unpublished" / "publish", "", userAndCookies._2)
