@@ -162,10 +162,14 @@ object ScalatronApiClient {
                   } yield {
                     deploy.right.foreach {
                       _ => lastLocalUser = Some(user); println("Remote deploy successful!")
-                    }; deploy
+                    };
+                    deploy.left.foreach {
+                      _ => cookieStore = cookieStore.updated(user, None)
+                    };
+                    deploy
                   })
                 }
-                case None => {
+                case _ => {
                   val password = readLine("Password: ").trim
                   println("")
                   println("Deploying...")
@@ -238,9 +242,9 @@ object ScalatronApiClient {
     val postRequest = Http((req << write(body) <:< Map("Content-Type" -> "application/json")).POST OK (r => r)).either
     postRequest.right.map(r => {
       val cookies = r.getCookies.asScala.toList.map(Cookie.apply)
-      if (cookies.nonEmpty) {
-        cookieStore = cookieStore.updated(username, Some(cookies))
-      }
+      //if (cookies.nonEmpty) {
+     //   cookieStore = cookieStore.updated(username, Some(cookies))
+     // }
       cookies
     })
   }
