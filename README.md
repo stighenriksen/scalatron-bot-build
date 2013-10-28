@@ -15,7 +15,7 @@ a local and a remote Scalatron server.
 ```
 3. Go back to sbt and run 'start'. This will start a local Scalatron server.
 4. Run 'deploy-local'. Enter the name of your bot and press enter.
-5. Open the Scalatron arena map that popped up when you entered 'start', press 'r' to refresh,
+5. Open the Scalatron display window and press 'r' to refresh,
    and verify that you have a bot in the arena with the name you entered.
 6. Go back to IntelliJ (or alternatively, your favourite editor), make changes and run 'deploy-local' again when ready.
 7. To delete all the local bots running around (except the 'Reference' bot), run 'delete-bots'.

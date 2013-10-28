@@ -162,10 +162,13 @@ object ScalatronApiClient {
        botName = readLine("No whitespace allowed, please try a different name: ")
     }
 
+    println("Deploying...")
+
     val botDir = baseDirectory / "lib" / "Scalatron" / "bots"
     IO createDirectory (botDir / botName)
     IO copyFile (botJar, baseDirectory / "lib"/ "Scalatron" / "bots" / botName / "ScalatronBot.jar")
 
+    println("Done! Refresh the display window with 'r' to see your bot.")
   }
 
   def deleteBots(baseDirectory: File) = {
