@@ -1,6 +1,3 @@
-// Based off of https://gist.github.com/trygvis/2266342
-// Copy Scalatron/bin/Scalatron.jar to lib/ before compiling
-
 import sbt._
 import Keys._
 
@@ -40,7 +37,7 @@ object Build extends Build {
 
   val botSettings = Seq[Setting[_]](
     name := "my-scalatron-bot",
-    scalaVersion := "2.9.3",
+    scalaVersion := "2.10.2",
     unmanagedJars in Compile <++= baseDirectory map { base =>
       val libs = base / "lib"
       val dirs = (libs / "Scalatron" / "bin")
