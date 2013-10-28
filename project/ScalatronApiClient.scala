@@ -118,13 +118,6 @@ object ScalatronApiClient {
     }
   }
 
-  def help() = {
-    println {
-      "" +
-        "test test"
-    }
-  }
-
   case class ScalatronUser(name: String, resource: String, session: String)
   case class ScalatronUsers(users: Seq[ScalatronUser])
 
