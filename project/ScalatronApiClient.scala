@@ -29,7 +29,7 @@ object ScalatronApiClient {
   var cookieStore: Map[String, Option[List[Cookie]]] = Map()
 
   case class ScalatronOption(key: String, value: String) {
-    override def toString = s"-$key $value"
+    override def toString = "-" + key + " " + value
   }
 
   case class Config(connection: Connection, scalatronOptions: ScalatronOptions, javaOptions: Seq[String])
@@ -90,9 +90,9 @@ object ScalatronApiClient {
 
         val javaCommand = javaHome.getOrElse("java")
 
-        val cmd = s"$javaCommand $javaOptions " +
-          s"-jar $scalatronJar -port $port $scalatronOptions"
-        println(s"Running scalatron with command: $cmd")
+        val cmd = javaCommand + " " + javaOptions + " " +
+          "-jar " + scalatronJar + " " + "-port " + port + " " + scalatronOptions
+        println("Running scalatron with command: " + cmd)
 
         val process = sbt.Process(cmd)
 
@@ -152,7 +152,7 @@ object ScalatronApiClient {
       case (None, Some(remotePort)) => sys.error("Missing remote host. Update config.json in the projects base directory.")
       case (Some(remoteHost), Some(remotePort)) => {
         var promptText = "Deploy bot as user: "
-        promptText = lastRemoteUser.map(u => promptText + s"(Leave empty to deploy as '$u') ").getOrElse(promptText)
+        promptText = lastRemoteUser.map(u => promptText + "(Leave empty to deploy as '$u') ").getOrElse(promptText)
         val name = Option(readLine(promptText).trim).filterNot(_.isEmpty).orElse(lastRemoteUser)
         name match {
           case None => {
@@ -184,7 +184,7 @@ object ScalatronApiClient {
 
   def deployLocal(baseDirectory: File, botJar: File) {
     var promptText = "Bot name: "
-    promptText = lastLocalBot.map(u => promptText + s"(Leave empty to deploy as '$u') ").getOrElse(promptText)
+    promptText = lastLocalBot.map(u => promptText + "(Leave empty to deploy as '" + u +"') ").getOrElse(promptText)
 
     var botName = readLine(promptText).trim
 
@@ -198,7 +198,7 @@ object ScalatronApiClient {
 
     Option(botName).filterNot(_.isEmpty) match {
       case Some(bot) => {
-        println("Deploying...")
+        println("Deploying '" + botName + "'...")
 
         val botDir = baseDirectory / "lib" / "Scalatron" / "bots"
         IO createDirectory (botDir / botName)
@@ -215,7 +215,7 @@ object ScalatronApiClient {
 
     lastLocalBot match {
       case Some(botName) => {
-        println(s"Deploying '$botName'...")
+        println("Deploying '" + botName + "'...")
         val botDir = baseDirectory / "lib" / "Scalatron" / "bots"
         IO createDirectory (botDir / botName)
         IO copyFile(botJar, baseDirectory / "lib" / "Scalatron" / "bots" / botName / "ScalatronBot.jar")

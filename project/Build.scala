@@ -3,7 +3,13 @@ import Keys._
 
 object Build extends Build {
   val botDirectory = SettingKey[File]("bot-directory")
-  libraryDependencies ++= Seq("net.databinder.dispatch" %% "dispatch-core" % "0.11.0")
+  libraryDependencies ++= Seq("net.databinder.dispatch" %% "dispatch-core" % "0.11.0",
+Defaults.sbtPluginExtra(
+    m = "com.github.mpeltonen" % "sbt-idea" % "1.5.2" , // Plugin module name and version
+    sbtV = "0.12.0",    // SBT version
+    scalaV = "2.9.2"    // Scala version compiled the plugin
+  ))
+
   val start = TaskKey[Unit]("start") <<= (baseDirectory,
     unmanagedClasspath in Compile, javaHome) map {
     (baseDirectory, ucp, java) =>
@@ -42,7 +48,7 @@ object Build extends Build {
 
   val botSettings = Seq[Setting[_]](
     name := "my-scalatron-bot",
-    scalaVersion := "2.10.2",
+    scalaVersion := "2.9.3",
     unmanagedJars in Compile <++= baseDirectory map { base =>
       val libs = base / "lib"
       val dirs = (libs / "Scalatron" / "bin")
