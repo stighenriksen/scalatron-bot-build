@@ -23,7 +23,8 @@ object ScalatronApiClient {
 
   var currentProcess: Option[sbt.Process] = None
 
-  var lastLocalUser: Option[String] = None
+  var lastLocalBot: Option[String] = None
+  var lastRemoteUser: Option[String] = None
 
   var cookieStore: Map[String, Option[List[Cookie]]] = Map()
 
@@ -151,8 +152,8 @@ object ScalatronApiClient {
       case (None, Some(remotePort)) => sys.error("Missing remote host. Update config.json in the projects base directory.")
       case (Some(remoteHost), Some(remotePort)) => {
         var promptText = "Deploy bot as user: "
-        promptText = lastLocalUser.map(u => promptText + s"(Leave empty to deploy as '$u') ").getOrElse(promptText)
-        val name = Option(readLine(promptText).trim).filterNot(_.isEmpty).orElse(lastLocalUser)
+        promptText = lastRemoteUser.map(u => promptText + s"(Leave empty to deploy as '$u') ").getOrElse(promptText)
+        val name = Option(readLine(promptText).trim).filterNot(_.isEmpty).orElse(lastRemoteUser)
         name match {
           case None => {
             println("Username cannot be empty.")
@@ -171,7 +172,7 @@ object ScalatronApiClient {
                 deploy <- putJsonWithAuth(remoteScalatronServer / "api" / "users" / userAndCookies._1.name / "unpublished" / "publish", "", userAndCookies._2)
               } yield {
                 deploy.right.foreach {
-                  _ => lastLocalUser = Some(user); println("Remote deploy successful!")
+                  _ => lastRemoteUser = Some(user); println("Remote deploy successful!")
                 }; deploy
               })
             }
@@ -181,22 +182,50 @@ object ScalatronApiClient {
     }
   }
 
-  def deployLocal(baseDirectory: File, botJar: File) = {
-    var promptText = "Name of bot: "
-    promptText = lastLocalUser.map(u => promptText + s"(Leave empty to deploy as '$u')").getOrElse(promptText)
+  def deployLocal(baseDirectory: File, botJar: File) {
+    var promptText = "Bot name: "
+    promptText = lastLocalBot.map(u => promptText + s"(Leave empty to deploy as '$u') ").getOrElse(promptText)
 
-    var botName = readLine("Bot name: ")
-    if (botName.exists(c => Character.isWhitespace(c))) {
-      botName = readLine("No whitespace allowed, please try a different name: ")
+    var botName = readLine(promptText).trim
+
+    botName = (Option(botName).filterNot(_.isEmpty), lastLocalBot) match {
+      case (Some(bot), _) => bot
+      case (None, Some(bot)) => bot
+      case (None, None) => {
+        ""
+      }
     }
 
-    println("Deploying...")
+    Option(botName).filterNot(_.isEmpty) match {
+      case Some(bot) => {
+        println("Deploying...")
 
-    val botDir = baseDirectory / "lib" / "Scalatron" / "bots"
-    IO createDirectory (botDir / botName)
-    IO copyFile(botJar, baseDirectory / "lib" / "Scalatron" / "bots" / botName / "ScalatronBot.jar")
+        val botDir = baseDirectory / "lib" / "Scalatron" / "bots"
+        IO createDirectory (botDir / botName)
+        IO copyFile(botJar, baseDirectory / "lib" / "Scalatron" / "bots" / botName / "ScalatronBot.jar")
+        lastLocalBot = Some(botName)
+        println("Done! Refresh the display window with 'r' to see your bot.")
+      }
+      case None =>   println("Please specify a non-empty bot name."); deployLocal(baseDirectory, botJar)
+    }
 
-    println("Done! Refresh the display window with 'r' to see your bot.")
+  }
+
+  def redeployLast(baseDirectory: File, botJar: File) = {
+
+    lastLocalBot match {
+      case Some(botName) => {
+        println(s"Deploying '$botName'...")
+        val botDir = baseDirectory / "lib" / "Scalatron" / "bots"
+        IO createDirectory (botDir / botName)
+        IO copyFile(botJar, baseDirectory / "lib" / "Scalatron" / "bots" / botName / "ScalatronBot.jar")
+
+        println("Done! Refresh the display window with 'r' to see your bot.")
+      }
+      case None => {
+        deployLocal(baseDirectory, botJar)
+      }
+    }
   }
 
   def deleteBots(baseDirectory: File) = {

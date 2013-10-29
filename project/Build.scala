@@ -25,6 +25,11 @@ object Build extends Build {
     ScalatronApiClient.deployLocal(baseDirectory, botJar)
   }
 
+  val redeployLast = TaskKey[Unit]("redeploy-last",
+    "Deploys Scalatron bot to local server, re-using the same bot name that was previously used.")   <<= (baseDirectory, packageBin in Compile) map { (baseDirectory, botJar) =>
+    ScalatronApiClient.redeployLast(baseDirectory, botJar)
+  }
+
   val deleteBots = TaskKey[Unit]("delete-bots", "Delete all local Scalatron bots") <<= (baseDirectory) map { (baseDirectory) =>
     ScalatronApiClient.deleteBots(baseDirectory)
   }
@@ -32,7 +37,7 @@ object Build extends Build {
   val bot = Project(
     id = "mybot",
     base = file("."),
-    settings = Project.defaultSettings ++ botSettings ++ inConfig(ScalaTron)(Seq(deployLocal, deployRemote,
+    settings = Project.defaultSettings ++ botSettings ++ inConfig(ScalaTron)(Seq(deployLocal, redeployLast, deployRemote,
       start, stop, deleteBots))).configs(ScalaTron)
 
   val botSettings = Seq[Setting[_]](
