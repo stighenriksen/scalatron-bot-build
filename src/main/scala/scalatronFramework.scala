@@ -55,8 +55,8 @@ object CommandParser {
 
 object Command {
   def apply(cmd: String, get: Parameters): Command = cmd match {
-    case "Welcome" => Welcome(get[String]("name"), get[String]("path"), get[Int]("apocalypse"), get[Int]("round"))
-    case "React"   => React(get[Int]("generation"), get[String]("name"), get[Int]("time"), get[String]("view"), get[String]("energy"), get[Seq[(Int, Int)]]("master"))
+    case "Welcome" => Welcome(get[String]("name"), get[Int]("apocalypse"), get[Int]("round"))
+    case "React"   => React(get[Int]("generation"), get[String]("name"), get[Int]("time"), get[String]("view"), get[String]("energy"), Seq())
     case "Goodbye" => Goodbye(get[Int]("energy"))
   }
 }
@@ -73,7 +73,7 @@ sealed trait Command
  * apocalypse: the number of steps that will be performed in the upcoming game round. This allows bots to plan ahead and to e.g. schedule the recall of harvesting drones. Keep in mind, however, that the control function of master bots is only invoked with React every second simulation step! See the Game Rules for details.
  * round: the index of the round for which the control function was instantiated. A game server continually runs rounds of the game, and the round index is incremented each time.
  */
-case class Welcome(name: String, path: String, apocalypse: Int, round: Int) extends Command
+case class Welcome(name: String, apocalypse: Int, round: Int) extends Command
 
 /**
  * React(generation=int,name=string,time=int,view=string,energy=string,master=int:int,…)
