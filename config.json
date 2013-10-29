@@ -5,7 +5,7 @@
             "port": 8080
         },
         "remote" : {
-            "host" : "10.210.102.195",
+            "host" : "www.stighenriksen.com",
             "port": 8080
         }
     },
