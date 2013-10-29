@@ -33,12 +33,6 @@ object Parameters {
   }
 }
 
-class ControlFunctionFactory {
-  def create = (input: String) => {
-    val command = CommandParser(input)
-  }
-}
-
 // -------------------------------------------------------------------------------------------------
 /**
  * Utility methods for parsing strings containing a single command of the format
