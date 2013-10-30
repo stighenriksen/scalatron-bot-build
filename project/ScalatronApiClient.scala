@@ -211,7 +211,40 @@ object ScalatronApiClient {
 
   }
 
-  def redeployLast(baseDirectory: File, botJar: File) = {
+  def stressTest(baseDirectory: File, botJar: File) {
+    var promptText = "Stress test name: "
+    var botName = readLine(promptText).trim
+
+    val numBots = Option(readLine("Number of bots (max 60): ").trim).filterNot(s => s.isEmpty && s.exists(! _.isDigit))
+      .map(_.toInt).map(n => if (n > 60) 60 else n).getOrElse(10)
+
+    botName = Option(botName).filterNot(_.isEmpty) match {
+      case Some(bot) => bot
+      case _ => ""
+     }
+
+    Option(botName).filterNot(_.isEmpty) match {
+      case Some(bot) => {
+        for {
+          i <- 1 to numBots
+        } yield {
+          val testBotName = botName + i
+          println("Deploying '" + testBotName + "'...")
+          val botDir = baseDirectory / "lib" / "Scalatron" / "bots"
+
+          IO createDirectory (botDir / testBotName)
+          IO copyFile(botJar, baseDirectory / "lib" / "Scalatron" / "bots" / testBotName / "ScalatronBot.jar")
+          lastLocalBot = Some(testBotName)
+
+        }
+        println("Done! Refresh the display window with 'r' to see your bot.")
+      }
+      case None => println("Please specify a non-empty bot name."); deployLocal(baseDirectory, botJar)
+    }
+
+  }
+
+  def redeployLocal(baseDirectory: File, botJar: File) = {
 
     lastLocalBot match {
       case Some(botName) => {
