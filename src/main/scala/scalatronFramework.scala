@@ -1,3 +1,5 @@
+import scala.util.Try
+
 // -------------------------------------------------------------------------------------------------
 // Framework (https://gist.github.com/jedws/2643617#file-scalatronframework-scala)
 // -------------------------------------------------------------------------------------------------
@@ -25,11 +27,13 @@ object Mapper {
 
 trait Parameters {
   def apply[A: Mapper](s: String): A
+  def get(s: String): Option[String]
 }
 
 object Parameters {
   implicit def StringyMapToParameters(m: Map[String, String]) = new Parameters {
     def apply[A: Mapper](s: String): A = implicitly[Mapper[A]].apply(m(s))
+    def get(s: String) = m.get(s)
   }
 }
 
@@ -56,7 +60,7 @@ object CommandParser {
 object Command {
   def apply(cmd: String, get: Parameters): Command = cmd match {
     case "Welcome" => Welcome(get[String]("name"), get[Int]("apocalypse"), get[Int]("round"))
-    case "React"   => React(get[Int]("generation"), get[String]("name"), get[Int]("time"), get[String]("view"), get[String]("energy"), Seq())
+    case "React"   => React(get[Int]("generation"), get[Int]("time"), get[String]("view"), get[String]("energy"), get[String]("name"), get)
     case "Goodbye" => Goodbye(get[Int]("energy"))
   }
 }
@@ -91,7 +95,7 @@ case class Welcome(name: String, apocalypse: Int, round: Int) extends Command
  *
  * The control function is expected to return a valid response, which may consist of zero or more commands separated by a pipe (|) character. The available commands are listed in the section Opcodes of Plugin-to-Server Commands.
  */
-case class React(generation: Int, name: String, time: Int, view: String, energy: String, master: Seq[(Int, Int)]) extends Command
+case class React(generation: Int, time: Int, view: String, energy: String, name: String, get: Parameters) extends Command
 
 /**
  * “Goodbye” is the last command sent by the server to a plug-in after all other invocations. The plug-in should use this opportunity to close any open files (such as those used for debug logging) and to relinquish control of any other resources it may hold.
@@ -177,7 +181,7 @@ case class Spawn(direction: Heading, name: Option[String] = None, energy: Int) e
  * No Energy Cost/ All bots are permitted.
  */
 case class Set(map: Map[String, String]) extends Op {
-  override def toString = Util.string("Set", map.elements.toSeq: _*)
+  override def toString = Util.string("Set", map.toSeq: _*)
 }
 
 //
@@ -434,8 +438,8 @@ case class View(cells: String) extends (Coord => Cell) {
 
   def apply(c: Coord): Cell = Relative(c)
 
-  def offsetToNearest(c: Char): Coord =
-    cells.view.zipWithIndex.filter(_._1 == c).map(p => Relative.fromIndex(p._2)).minBy(_.length)
+  def offsetToNearest(c: Char): Option[Coord] =
+      cells.view.zipWithIndex.filter(_._1 == c).map(p => Relative.fromIndex(p._2)).sortBy(_.length).headOption
 
   object Relative extends View.Projection {
     def indexFrom(c: Coord) = Absolute.indexFrom(Absolute.fromRelative(c))
