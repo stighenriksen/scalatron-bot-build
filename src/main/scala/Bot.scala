@@ -25,67 +25,66 @@ class ControlFunction {
               )
             }
             val shoot = if (shootMissile) {
-              val dir = nonDangerousAlternative(view, Coord(1, 0))
-              "|Spawn(direction="+dir+")"
-            } else ""
+              val dir = nonDangerousAlternative(view, Heading.East)
+              Some(Spawn(dir))
+            } else None
             val beast = view.offsetToNearest('B')
             val plant = view.offsetToNearest('P')
 
             (beast, plant) match {
               case (Some(beastO), Some(plantO)) =>
                 val offset = if (view.center.distanceTo(beastO) + 2 < view.center.distanceTo(plantO)) beastO else plantO
-                val unitOffset = offset.signum
-                val heading = nonDangerousAlternative(view, unitOffset)
-                "Move(direction=" + heading + ")|Set(heading="+heading+")"+shoot
+                val heading = nonDangerousAlternative(view, offset.heading)
+                val headingCmd = Some(Set(Map("heading"->heading.toString)))
+                Move(heading) and (headingCmd :: shoot :: Nil)
               case (Some(offset), None) =>
-                val unitOffset = offset.signum
-                val heading = nonDangerousAlternative(view, unitOffset)
-                "Move(direction=" + heading + ")|Set(heading="+heading+")"+shoot
+                val heading = nonDangerousAlternative(view, offset.heading)
+                val headingCmd = Some(Set(Map("heading"->heading.toString)))
+                Move(heading) and (headingCmd :: shoot :: Nil)
               case (None, Some(offset)) =>
-                val unitOffset = offset.signum
-                val heading = nonDangerousAlternative(view, unitOffset)
-                "Move(direction=" + heading + ")|Set(heading="+heading+")"+shoot
+                val heading = nonDangerousAlternative(view, offset.heading)
+                val headingCmd = Some(Set(Map("heading"->heading.toString)))
+                Move(heading) and (headingCmd :: shoot :: Nil)
               case (None, None) =>
-                val dir = params.get("heading").map(Coord.parse).getOrElse(Coord(1, 0))
+                val dir = params.get("heading").map(Heading.parse).getOrElse(Heading.East)
                 val heading = nonDangerousAlternative(view, dir)
-                "Move(direction=" + heading + ")|Set(heading="+heading+")"+shoot
+                val headingCmd = Some(Set(Map("heading"->heading.toString)))
+                Move(heading) and (headingCmd :: shoot :: Nil)
             }
 
           }
           case _ => { // Missile!!
             (enemy, enemyBot) match {
-              case (Some(enemyO), _) if view.center.distanceTo(enemyO) <= 4 => "Explode(size="+view.center.distanceTo(enemyO)+")"
-              case (_, Some(enemyBotO)) if view.center.distanceTo(enemyBotO) <= 2 => "Explode(size=2)"
+              case (Some(enemyO), _) if view.center.distanceTo(enemyO) <= 4 => Explode(view.center.distanceTo(enemyO).toInt)
+              case (_, Some(enemyBotO)) if view.center.distanceTo(enemyBotO) <= 2 => Explode(2)
               case (Some(enemyO), _) => {
-                val heading = nonDangerousAlternative(view, enemyO.signum)
-                "Move(direction=" + heading + ")|Set("+name+"_heading"++"="+heading+")"
+                val heading = nonDangerousAlternative(view, enemyO.heading)
+                val headingCmd = Some(Set(Map("heading"->heading.toString)))
+                Move(heading) and (headingCmd :: Nil)
               }
               case _ => {
                 val dir = params.get(name+"_heading").map(Coord.parse).getOrElse(Coord(1, 0))
-                val heading = nonDangerousAlternative(view, dir)
-                "Move(direction=" + heading + ")|Set("+name+"_heading="+heading+")"
+                val heading = nonDangerousAlternative(view, dir.heading)
+                val headingCmd = Some(Set(Map("heading"->heading.toString)))
+                Move(heading) and (headingCmd :: Nil)
               }
             }
           }
         }
       }
-      case _ => "Status(text=fiskefisk)"
+      case _ => Status("Så rart...")
     }
   }
 
 
-  def nonDangerousAlternative(view: View, dir: Coord): Coord = {
-    def getNewDir = nonDangerousAlternative(view, Coord(Random.nextInt(3)-1, Random.nextInt(3)-1))
-    val newDir = view.Relative(dir) match {
+  def nonDangerousAlternative(view: View, dir: Heading): Heading = {
+    def getNewDir = nonDangerousAlternative(view, Heading.random(rnd))
+    view.Relative(dir) match {
       case Cell.Wall => getNewDir
       case Cell.BadBeast => getNewDir
       case Cell.BadPlant => getNewDir
       case Cell.YourSlave => getNewDir
       case _ => dir
-    }
-    newDir match {
-      case Coord(0, 0) => nonDangerousAlternative(view, Coord(Random.nextInt(3)-1, Random.nextInt(3)-1))
-      case _ => newDir
     }
   }
 }
