@@ -1,7 +1,7 @@
 scalatron-bot-build
 ===================
 
-This project aims to help with building and deploying a [Scalatron](http://scalatron.github.io/") bot to
+This project aims to help with building and deploying a [Scalatron](http://scalatron.github.io/) bot to
 a local and a remote Scalatron server.
 
 ## Build and deploy local bot:
