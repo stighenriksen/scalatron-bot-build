@@ -1,4 +1,4 @@
-import scala.util.Try
+import scala.util.{Random, Try}
 
 // -------------------------------------------------------------------------------------------------
 // Framework (https://gist.github.com/jedws/2643617#file-scalatronframework-scala)
@@ -113,7 +113,9 @@ case class Time() extends Property
 case class ViewProperty() extends Property
 case class Master() extends Property
 
-sealed trait MiniOp
+sealed trait MiniOp {
+  def and(that: Seq[Option[MiniOp]]) = this.toString + that.flatten.mkString("|","|","")
+}
 sealed trait Op extends MiniOp
 
 /**
@@ -163,7 +165,7 @@ case class Move(direction: Heading) extends Op {
  *
  * Note that this means that mini-bots can spawn other mini-bots (if they have the required energy, i.e. at least 100 EU).
  */
-case class Spawn(direction: Heading, name: Option[String] = None, energy: Int) extends Op {
+case class Spawn(direction: Heading, name: Option[String] = None, energy: Int = 100) extends Op {
   require(energy >= 100, "energy must be >= than 100")
   override def toString =
     Util.string("Spawn", "direction" -> direction, "energy" -> energy, "name" -> name)
@@ -344,8 +346,8 @@ object Util {
     val w = new java.io.StringWriter().append(name).append("(")
     is.foreach {
       case (n, None)    =>
-      case (n, Some(v)) => w.append(n).append(v.toString)
-      case (n, v)       => w.append(n).append(v.toString)
+      case (n, Some(v)) => w.append(n).append("=").append(v.toString)
+      case (n, v)       => w.append(n).append("=").append(v.toString)
     }
     w.append(")").toString
   }
@@ -353,31 +355,32 @@ object Util {
 
 object Heading {
   /** parse a value from Heading.toString format, e.g. "0:1". */
+  def random(rnd: Random): Heading = Directions(rnd.nextInt(8))
+
   def parse(s: String): Heading = Util.parse(s)(Heading.apply)
   def apply(x: Int, y: Int): Heading =
-    if (x == 1) {
-      if (y == 1) NorthEast
-      else if (y == 0) East
-      else SouthEast
-    } else if (x == 0) {
-      if (y == 1) North
-      else if (y == 0) Nowhere
-      else South
-    } else {
-      if (y == 1) NorthWest
-      else if (y == 0) West
-      else SouthWest
+    (x, y) match {
+      case (1,1) => NorthEast
+      case (1,0) => East
+      case (1,-1) => SouthEast
+      case (0,1) => North
+      case (0,0) => Nowhere
+      case (0,-1) => South
+      case (-1,1) => NorthWest
+      case (-1,0) => West
+      case (-1,-1) => SouthWest
     }
 
   import Displacement.{ Pos, Zero, Neg }
   val East = new Heading(Pos, Zero)
-  val NorthEast = Heading(Pos, Neg)
-  val North = Heading(Zero, Neg)
-  val NorthWest = Heading(Neg, Neg)
+  val NorthEast = Heading(Pos, Pos)
+  val North = Heading(Zero, Pos)
+  val NorthWest = Heading(Neg, Pos)
   val West = Heading(Neg, Zero)
-  val SouthWest = Heading(Neg, Pos)
-  val South = Heading(Zero, Pos)
-  val SouthEast = Heading(Pos, Pos)
+  val SouthWest = Heading(Neg, Neg)
+  val South = Heading(Zero, Neg)
+  val SouthEast = Heading(Pos, Neg)
+  val Directions = Array(East, NorthEast, North, NorthWest, West, SouthWest, South, SouthEast)
 
   val Nowhere = Heading(0, 0)
 }
@@ -387,6 +390,8 @@ case class Heading private (x: Displacement, y: Displacement) {
 }
 
 object Coord {
+  implicit def HeadingToCoord(m: Heading) = Coord(m.x.value, m.y.value)
+
   /** parse a value from Coord.toString format, e.g. "0:1". */
   def parse(s: String): Coord = Util.parse(s)(Coord.apply)
 }
@@ -415,6 +420,7 @@ case class Coord(x: Int, y: Int) {
   def stepCount: Int = x.abs.max(y.abs) // steps from (0,0) to get here: max X or Y
 
   def signum = Coord(x.signum, y.signum)
+  def heading = Heading(x.signum, y.signum)
 
   def wrap(size: Coord) = {
     def fix(a: Int, len: Int) = if (a < 0) len + a else if (a >= len) a % len else a
