@@ -60,7 +60,7 @@ object CommandParser {
 object Command {
   def apply(cmd: String, get: Parameters): Command = cmd match {
     case "Welcome" => Welcome(get[String]("name"), get[Int]("apocalypse"), get[Int]("round"))
-    case "React"   => React(get[Int]("generation"), get[Int]("time"), get[String]("view"), get[String]("energy"), get[String]("name"), get)
+    case "React"   => React(get[Int]("generation"), get[Int]("time"), get[String]("view"), get[Int]("energy"), get[String]("name"), get)
     case "Goodbye" => Goodbye(get[Int]("energy"))
   }
 }
@@ -95,7 +95,7 @@ case class Welcome(name: String, apocalypse: Int, round: Int) extends Command
  *
  * The control function is expected to return a valid response, which may consist of zero or more commands separated by a pipe (|) character. The available commands are listed in the section Opcodes of Plugin-to-Server Commands.
  */
-case class React(generation: Int, time: Int, view: String, energy: String, name: String, get: Parameters) extends Command
+case class React(generation: Int, time: Int, view: String, energy: Int, name: String, get: Parameters) extends Command
 
 /**
  * “Goodbye” is the last command sent by the server to a plug-in after all other invocations. The plug-in should use this opportunity to close any open files (such as those used for debug logging) and to relinquish control of any other resources it may hold.
@@ -343,13 +343,12 @@ object Util {
   }
 
   def string(name: String, is: (String, Any)*): String = {
-    val w = new java.io.StringWriter().append(name).append("(")
-    is.foreach {
-      case (n, None)    =>
-      case (n, Some(v)) => w.append(n).append("=").append(v.toString)
-      case (n, v)       => w.append(n).append("=").append(v.toString)
+    val params = is.flatMap {
+      case (n, None)    => None
+      case (n, Some(v)) => Some(n+"="+v.toString)
+      case (n, v)       => Some(n+"="+v.toString)
     }
-    w.append(")").toString
+    name + params.mkString("(",",",")")
   }
 }
 
@@ -390,7 +389,7 @@ case class Heading private (x: Displacement, y: Displacement) {
 }
 
 object Coord {
-  implicit def HeadingToCoord(m: Heading) = Coord(m.x.value, m.y.value)
+  implicit def HeadingToCoord(m: Heading): Coord = Coord(m.x.value, m.y.value)
 
   /** parse a value from Coord.toString format, e.g. "0:1". */
   def parse(s: String): Coord = Util.parse(s)(Coord.apply)
