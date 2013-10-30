@@ -59,13 +59,13 @@ class ControlFunction {
               case (_, Some(enemyBotO)) if view.center.distanceTo(enemyBotO) <= 2 => Explode(2)
               case (Some(enemyO), _) => {
                 val heading = nonDangerousAlternative(view, enemyO.heading)
-                val headingCmd = Some(Set(Map("heading"->heading.toString)))
+                val headingCmd = Some(Set(Map(name+"heading"->heading.toString)))
                 Move(heading) and (headingCmd :: Nil)
               }
               case _ => {
                 val dir = params.get(name+"_heading").map(Coord.parse).getOrElse(Coord(1, 0))
                 val heading = nonDangerousAlternative(view, dir.heading)
-                val headingCmd = Some(Set(Map("heading"->heading.toString)))
+                val headingCmd = Some(Set(Map(name+"heading"->heading.toString)))
                 Move(heading) and (headingCmd :: Nil)
               }
             }
