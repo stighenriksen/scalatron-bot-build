@@ -152,7 +152,7 @@ object ScalatronApiClient {
       case (None, Some(remotePort)) => sys.error("Missing remote host. Update config.json in the projects base directory.")
       case (Some(remoteHost), Some(remotePort)) => {
         var promptText = "Deploy bot as user: "
-        promptText = lastRemoteUser.map(u => promptText + "(Leave empty to deploy as '$u') ").getOrElse(promptText)
+        promptText = lastRemoteUser.map(u => promptText + "(Leave empty to deploy as '" + u + "') ").getOrElse(promptText)
         val name = Option(readLine(promptText).trim).filterNot(_.isEmpty).orElse(lastRemoteUser)
         name match {
           case None => {
