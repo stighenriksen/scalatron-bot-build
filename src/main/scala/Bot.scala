@@ -9,6 +9,19 @@ class ControlFunctionFactory {
 class HelloBot {
   def respond(input: String): String = {
     val (opcode, params) = CommandParser(input)
+    /*
+      For documentation of opcodes and parameters see:
+      https://github.com/scalatron/scalatron/blob/master/Scalatron/doc/markdown/Scalatron%20Protocol.md
+
+      The rules, including some strategies:
+      https://github.com/scalatron/scalatron/blob/master/Scalatron/doc/markdown/Scalatron%20Game%20Rules.md
+
+      Tutorial, with a lot of Scala help:
+      https://github.com/scalatron/scalatron/blob/master/Scalatron/doc/markdown/Scalatron%20Tutorial.md
+
+      Even more documentation:
+      https://github.com/scalatron/scalatron/tree/master/Scalatron/doc/markdown
+    */
     opcode match {
       case "React" => {
         val bot: BotImpl = BotImpl(params)
