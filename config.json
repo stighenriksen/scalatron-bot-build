@@ -17,7 +17,8 @@
             {"key": "frameX", "value": "700"},
             {"key": "frameY", "value": "800"},
             {"key": "steps", "value": "5000"},
-            {"key": "maxfps", "value": "50"}
+            {"key": "maxfps", "value": "50"},
+            {"key": "maxslaves", "value": "10"}
         ]
     },
     "javaOptions": ["-Xmx1g", "-server", "-Xmx1024M", "-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"]
